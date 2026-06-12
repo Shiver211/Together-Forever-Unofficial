@@ -22,25 +22,18 @@
 package com.buuz135.togetherforever.api;
 
 import com.buuz135.togetherforever.api.data.DataManager;
-import com.buuz135.togetherforever.api.data.TeamInvite;
-import com.buuz135.togetherforever.api.event.TeamEvent;
+import com.buuz135.togetherforever.api.data.FTBTogetherTeam;
+import com.feed_the_beast.ftblib.lib.data.ForgePlayer;
+import com.feed_the_beast.ftblib.lib.data.Universe;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.event.ClickEvent;
-import net.minecraft.util.text.event.HoverEvent;
 import net.minecraft.world.World;
 import net.minecraftforge.common.DimensionManager;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -54,10 +47,8 @@ public class TogetherForeverAPI {
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
     private static TogetherForeverAPI ourInstance = new TogetherForeverAPI();
-    private List<TeamInvite> teamInvites;
 
     private TogetherForeverAPI() {
-        teamInvites = new ArrayList<>();
     }
 
     public static TogetherForeverAPI getInstance() {
@@ -65,110 +56,17 @@ public class TogetherForeverAPI {
     }
 
     /**
-     * Gets the list of teams. Changes done to this list won't be saved
-     *
-     * @return The list of teams
-     */
-    public List<ITogetherTeam> getTeams() {
-        World world = getWorld();
-        if (world == null) return new ArrayList<>();
-        return getDataManager(world).getTeams();
-    }
-
-    /**
-     * Adds a team to the API
-     *
-     * @param togetherTeam The team to add
-     */
-    public void addTeam(ITogetherTeam togetherTeam) {
-        DataManager dataManager = getDataManager(getWorld());
-        if (dataManager == null) return;
-        TeamEvent.Create create = new TeamEvent.Create(togetherTeam);
-        MinecraftForge.EVENT_BUS.post(create);
-        if (!create.isCanceled()) {
-            dataManager.getTeams().add(create.getTogetherTeam());
-            dataManager.markDirty();
-        }
-    }
-
-    /**
-     * Adds a player to a team using the team unique identifiers to search it.
-     *
-     * @param team              The team to add the player to
-     * @param playerInformation The information of the player that needs to be added to the team
-     */
-    public void addPlayerToTeam(ITogetherTeam team, IPlayerInformation playerInformation) {
-        DataManager manager = getDataManager(getWorld());
-        if (manager == null) return;
-        for (ITogetherTeam togetherTeam : manager.getTeams()) {
-            if (togetherTeam.getOwner().equals(team.getOwner()) && togetherTeam.getTeamName().equalsIgnoreCase(team.getTeamName())) {
-                TeamEvent.PlayerAdd playerAdd = new TeamEvent.PlayerAdd(togetherTeam, playerInformation);
-                MinecraftForge.EVENT_BUS.post(playerAdd);
-                if (!playerAdd.isCanceled()) {
-                    playerAdd.getTogetherTeam().addPlayer(playerAdd.getPlayerInformation());
-                    manager.markDirty();
-                }
-            }
-        }
-    }
-
-    /**
-     * Removes a player from a team using the team unique identifiers to search it
-     *
-     * @param team              The team to remove the player from
-     * @param playerInformation The information of the player that needs to be removed from the team
-     */
-    public void removePlayerFromTeam(ITogetherTeam team, IPlayerInformation playerInformation) {
-        DataManager manager = getDataManager(getWorld());
-        if (manager == null) return;
-        for (ITogetherTeam togetherTeam : manager.getTeams()) {
-            if (togetherTeam.getOwner().equals(team.getOwner()) && togetherTeam.getTeamName().equalsIgnoreCase(team.getTeamName())) {
-                TeamEvent.RemovePlayer removePlayer = new TeamEvent.RemovePlayer(togetherTeam, playerInformation);
-                MinecraftForge.EVENT_BUS.post(removePlayer);
-                if (!removePlayer.isCanceled()) {
-                    removePlayer.getTogetherTeam().removePlayer(removePlayer.getPlayerInformation());
-                    manager.markDirty();
-                }
-            }
-        }
-    }
-
-    /**
-     * Gets the team of a player
+     * Gets the team of a player from the FTB Library team system
      *
      * @param playerUUID The UUID of the player to get the team from
      * @return The team of the player, null if the player isn't in a team
      */
     @Nullable
     public ITogetherTeam getPlayerTeam(UUID playerUUID) {
-        for (ITogetherTeam togetherTeam : getTeams()) {
-            for (IPlayerInformation playerInformation : togetherTeam.getPlayers()) {
-                if (playerInformation.getUUID().equals(playerUUID)) return togetherTeam;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Creates an invite to join a team
-     *
-     * @param sender         The player that sends the invite
-     * @param receiver       The player that receives the invite
-     * @param announceInvite true if the player that gets the invite needs to get a notification
-     * @return The created invite
-     */
-    public TeamInvite createTeamInvite(IPlayerInformation sender, IPlayerInformation receiver, boolean announceInvite) {
-        TeamInvite invite = new TeamInvite(sender, receiver);
-        if (announceInvite) {
-            ITextComponent accept = new TextComponentString("[ACCEPT]");
-            accept.getStyle().setBold(true).setColor(TextFormatting.GREEN).setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tofe accept " + sender.getName())).setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TextComponentString("Click to accept")));
-            ITextComponent decline = new TextComponentString("[DECLINE]");
-            decline.getStyle().setBold(true).setColor(TextFormatting.RED).setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tofe decline " + sender.getName())).setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TextComponentString("Click to accept")));
-            receiver.getPlayer().sendMessage(new TextComponentString("You have been invited to join " + sender.getName() + "'s team. Click ")
-                    .appendSibling(accept).appendText(" ").appendSibling(decline));
-        }
-        teamInvites.add(invite);
-        return invite;
+        if (!Universe.loaded()) return null;
+        ForgePlayer player = Universe.get().getPlayer(playerUUID);
+        if (player == null || !player.hasTeam()) return null;
+        return new FTBTogetherTeam(player.team);
     }
 
     /**
@@ -234,15 +132,6 @@ public class TogetherForeverAPI {
     @Nullable
     public EntityPlayerMP getPlayer(UUID uuid) {
         return FMLCommonHandler.instance().getMinecraftServerInstance().getPlayerList().getPlayerByUUID(uuid);
-    }
-
-    /**
-     * Gets the open team invites
-     *
-     * @return The list of team invites
-     */
-    public List<TeamInvite> getTeamInvites() {
-        return teamInvites;
     }
 
     /**

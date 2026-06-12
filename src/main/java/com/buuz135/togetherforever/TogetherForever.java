@@ -24,7 +24,6 @@ package com.buuz135.togetherforever;
 import com.buuz135.togetherforever.api.*;
 import com.buuz135.togetherforever.api.annotation.PlayerInformation;
 import com.buuz135.togetherforever.api.annotation.SyncAction;
-import com.buuz135.togetherforever.api.annotation.TogetherTeam;
 import com.buuz135.togetherforever.api.command.TogetherForeverCommand;
 import com.buuz135.togetherforever.api.data.DataManager;
 import com.buuz135.togetherforever.api.data.DefaultPlayerInformation;
@@ -32,6 +31,8 @@ import com.buuz135.togetherforever.api.data.TogetherRegistries;
 import com.buuz135.togetherforever.command.*;
 import com.buuz135.togetherforever.config.TogetherForeverConfig;
 import com.buuz135.togetherforever.utils.AnnotationHelper;
+import com.feed_the_beast.ftblib.events.team.ForgeTeamPlayerJoinedEvent;
+import com.feed_the_beast.ftblib.lib.data.ForgePlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextFormatting;
@@ -59,7 +60,7 @@ import java.util.List;
         modid = TogetherForever.MOD_ID,
         name = TogetherForever.MOD_NAME,
         version = TogetherForever.VERSION,
-        dependencies = "required:forge@[14.23.1.2560,);after:gamestages@[2.0.90,);after:reskillable@[1.9.1,);"
+        dependencies = "required:forge@[14.23.1.2560,);required-after:ftblib;required-after:ftbutilities;after:gamestages@[2.0.90,);after:reskillable@[1.9.1,);"
 )
 public class TogetherForever {
 
@@ -87,7 +88,6 @@ public class TogetherForever {
         LOGGER = event.getModLog();
         try {
             registerSyncActions(event.getAsmData());
-            registerTogetherTeams(event.getAsmData());
             registerPlayerInformations(event.getAsmData());
         } catch (IllegalAccessException | InstantiationException e) {
             e.printStackTrace();
@@ -113,7 +113,7 @@ public class TogetherForever {
 
     @Mod.EventHandler
     public void serverLoad(FMLServerStartingEvent event) {
-        TogetherForeverCommand command = new TogetherForeverCommand(Arrays.asList(new HelpCommand(), new InviteCommand(), new AcceptInviteCommand(), new DeclineInviteCommand(), new TeamKickCommand(), new TeamLeaveCommand(), new TeamInfoCommand(), new ForceSyncCommand()));
+        TogetherForeverCommand command = new TogetherForeverCommand(Arrays.asList(new HelpCommand(), new ForceSyncCommand()));
         event.registerServerCommand(command);
         event.registerServerCommand(new TogetherForeverDebug());
     }
@@ -150,6 +150,27 @@ public class TogetherForever {
         }
     }
 
+    /**
+     * When a player joins a FTB team, sync everything the rest of the (online) team members
+     * have into the joining player. This replaces the sync that the old invite system did on accept.
+     */
+    @SubscribeEvent
+    public void onTeamPlayerJoined(ForgeTeamPlayerJoinedEvent event) {
+        ForgePlayer joined = event.getPlayer();
+        EntityPlayerMP joinedMP = joined.getPlayer();
+        if (joinedMP == null) return;
+        ITogetherTeam team = TogetherForeverAPI.getInstance().getPlayerTeam(joined.getId());
+        if (team == null) return;
+        DefaultPlayerInformation joinedInfo = DefaultPlayerInformation.createInformation(joinedMP);
+        for (IPlayerInformation member : team.getPlayers()) {
+            if (member.getUUID().equals(joined.getId())) continue;
+            if (member.getPlayer() == null) continue;
+            for (ISyncAction<?, ? extends IOfflineSyncRecovery> action : TogetherRegistries.getSyncActions()) {
+                action.syncJoinPlayer(joinedInfo, member);
+            }
+        }
+    }
+
     private void registerSyncActions(ASMDataTable data) throws IllegalAccessException, InstantiationException {
         for (Class<?> aClass : AnnotationHelper.getAnnotatedClasses(data, SyncAction.class)) {
             if (ISyncAction.class.isAssignableFrom(aClass)) {
@@ -158,15 +179,6 @@ public class TogetherForever {
                     Object object = aClass.newInstance();
                     TogetherRegistries.registerSyncAction(syncAction.id(), (ISyncAction<?, ? extends IOfflineSyncRecovery>) object);
                 }
-            }
-        }
-    }
-
-    private void registerTogetherTeams(ASMDataTable data) {
-        for (Class aClass : AnnotationHelper.getAnnotatedClasses(data, TogetherTeam.class)) {
-            if (ITogetherTeam.class.isAssignableFrom(aClass)) {
-                TogetherTeam togetherTeam = (TogetherTeam) aClass.getAnnotation(TogetherTeam.class);
-                TogetherRegistries.registerTogetherTeam(togetherTeam.id(), aClass);
             }
         }
     }

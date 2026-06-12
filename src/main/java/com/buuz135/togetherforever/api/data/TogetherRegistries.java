@@ -30,7 +30,6 @@ import java.util.Map;
 public class TogetherRegistries {
 
     private static final HashMap<String, ISyncAction<?, ? extends IOfflineSyncRecovery>> SYNC_ACTION_REGISTRY = new HashMap<>();
-    private static final HashMap<String, Class<? extends ITogetherTeam>> TEAM_REGISTRY = new HashMap<>();
     private static final HashMap<String, Class<? extends IPlayerInformation>> PLAYER_REGISTRY = new HashMap<>();
 
     /**
@@ -71,17 +70,6 @@ public class TogetherRegistries {
     }
 
     /**
-     * Registers a together team class
-     *
-     * @param id   The ID of the team type
-     * @param team The class of the TogetherTeam
-     */
-    public static void registerTogetherTeam(String id, Class<? extends ITogetherTeam> team) {
-        TogetherForeverAPI.LOGGER.info("Registering TogetherTeam with id " + id + " and class " + team.getName());
-        TEAM_REGISTRY.put(id, team);
-    }
-
-    /**
      * Registers a PlayerInformation class
      *
      * @param id     The id of the PlayerInformation
@@ -114,32 +102,6 @@ public class TogetherRegistries {
     public static Class<? extends IPlayerInformation> getPlayerInformationClass(String id) {
         if (PLAYER_REGISTRY.containsKey(id)) {
             return PLAYER_REGISTRY.get(id);
-        }
-        return null;
-    }
-
-    /**
-     * Gets the ID of a TogetherTeam class
-     *
-     * @param aClass The Together team class
-     * @return The id of the team, null if doesn't exist
-     */
-    public static String getTogetherTeamID(Class<? extends ITogetherTeam> aClass) {
-        for (Map.Entry<String, Class<? extends ITogetherTeam>> stringClassEntry : TEAM_REGISTRY.entrySet()) {
-            if (aClass.equals(stringClassEntry.getValue())) return stringClassEntry.getKey();
-        }
-        return null;
-    }
-
-    /**
-     * Gets the TogetherTeam class for the ID
-     *
-     * @param id The id of the team
-     * @return The TeamTogether class, null if it doesn't exist
-     */
-    public static Class<? extends ITogetherTeam> getTogetherTeamClass(String id) {
-        if (TEAM_REGISTRY.containsKey(id)) {
-            return TEAM_REGISTRY.get(id);
         }
         return null;
     }

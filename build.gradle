@@ -90,7 +90,8 @@ changelog {
     title = "Together Forever"
     fileName = "CHANGELOG.md"
     outputDirectory = file("$projectDir")
-    since = '1.0.10'
+    // Removed explicit 'since' tag to avoid failures when that Git tag doesn't exist.
+    // If you want changelog generation to start from a specific tag, set `since = 'your-tag'`.
     commitFormat = '%s (%an)'
     markdown {
         commitFormat = '* %s (%an)'
