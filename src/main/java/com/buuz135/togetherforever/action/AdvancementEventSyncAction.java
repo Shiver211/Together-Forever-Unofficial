@@ -32,6 +32,8 @@ import net.minecraft.advancements.Advancement;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.event.entity.player.AdvancementEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,8 +41,11 @@ import java.util.List;
 @SyncAction(id = "advancement_event_sync")
 public class AdvancementEventSyncAction extends EventSyncAction<AdvancementEvent, AdvancementOfflineRecovery> {
 
+    private final AdvancementJoinSyncQueue joinSyncQueue;
+
     public AdvancementEventSyncAction() {
         super(AdvancementEvent.class, AdvancementOfflineRecovery.class);
+        this.joinSyncQueue = new AdvancementJoinSyncQueue();
     }
 
     public static void grantAllParentAchievements(EntityPlayerMP player, Advancement advancement) {
@@ -73,14 +78,14 @@ public class AdvancementEventSyncAction extends EventSyncAction<AdvancementEvent
     public void syncJoinPlayer(IPlayerInformation toBeSynced, IPlayerInformation teamMember) {
         if (!TogetherForeverConfig.advancementSync) return;
         if (teamMember.getPlayer() != null && toBeSynced.getPlayer() != null) {
-            EntityPlayerMP member = teamMember.getPlayer();
-            EntityPlayerMP sync = toBeSynced.getPlayer();
-            for (Advancement advancement : member.getServerWorld().getAdvancementManager().getAdvancements()) {
-                for (String crit : member.getAdvancements().getProgress(advancement).getCompletedCriteria()) {
-                    sync.getAdvancements().grantCriterion(advancement, crit);
-                }
-            }
+            joinSyncQueue.enqueue(toBeSynced.getPlayer(), teamMember.getPlayer(), teamMember.getPlayer().getServerWorld().getAdvancementManager().getAdvancements());
         }
+    }
+
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        joinSyncQueue.tick();
     }
 
     @Override

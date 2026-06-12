@@ -1,6 +1,7 @@
 Together Forever
 ================
 
+* 第一版 (Shiver211)
 * 修复构建 (Shiver211)
 * Made API truly separate from main code (Tencao)
 * Fixed event posting for player leave (Tencao)

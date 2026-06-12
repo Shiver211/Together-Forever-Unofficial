@@ -34,6 +34,10 @@ public class TogetherForeverConfig {
     @Config.Comment("If enabled, players in the same team will sync the advancements")
     public static boolean advancementSync = true;
 
+    @Config.Comment("Amount of advancements processed per tick when syncing a new team member")
+    @Config.RangeInt(min = 1)
+    public static int advancementJoinSyncPerTick = 25;
+
     @Config.Comment("If enabled, players in the same team will sync the gamestages")
     public static boolean gamestagesSync = true;
 
