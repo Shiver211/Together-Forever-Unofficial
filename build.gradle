@@ -58,11 +58,13 @@ repositories {
         name 'jared maven'
         url "http://maven.blamejared.com/"
     }
+    flatDir {
+        dirs 'libs'
+    }
 }
 dependencies {
-    deobfCompile "net.darkhax.bookshelf:Bookshelf-1.12.2:${version_bookshelf}"
-    deobfCompile "net.darkhax.gamestages:GameStages-1.12.2:${version_gamestages}"
-    deobfCompile "codersafterdark.reskillable:Reskillable:1.12.2-1.9.1-SNAPSHOT.93"
+    // Local libs folder dependencies
+    compile fileTree(dir: 'libs', include: '*.jar')
 }
 
 processResources {
