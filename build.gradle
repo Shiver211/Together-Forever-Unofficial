@@ -86,48 +86,11 @@ processResources {
     }
 }
 
-changelog {
-    title = "Together Forever"
-    fileName = "CHANGELOG.md"
-    outputDirectory = file("$projectDir")
-    // Removed explicit 'since' tag to avoid failures when that Git tag doesn't exist.
-    // If you want changelog generation to start from a specific tag, set `since = 'your-tag'`.
-    commitFormat = '%s (%an)'
-    markdown {
-        commitFormat = '* %s (%an)'
-    }
-    includeLines = {
-        !it.contains("Merge")
-    }
-    processLines = {
-        String input = it as String
-        if (input.contains('[ci skip] ')) {
-            input = input.minus('[ci skip] ')
-        }
-        input
-    }
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-curseforge {
-    if (project.hasProperty('curse_api')) {
-        apiKey = project.curse_api
-    }
-    project {
-        id = '285968'
-        changelog = file('CHANGELOG.md')
-        changelogType = 'markdown'
-        releaseType = 'beta'
-
-        mainArtifact(jar){
-            relations {
-                optionalLibrary 'game-stages'
-                optionalLibrary 'reskillable'
-            }
-        }
-
-        addArtifact sourceJar
-    }
-}
+assemble.dependsOn reobfJar
 
 license {
     header rootProject.file('HEADER')
